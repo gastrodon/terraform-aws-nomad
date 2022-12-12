@@ -19,42 +19,6 @@ terraform {
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
-# AUTOMATICALLY LOOK UP THE LATEST PRE-BUILT AMI
-# This repo contains a CircleCI job that automatically builds and publishes the latest AMI by building the Packer
-# template at /examples/nomad-consul-ami upon every new release. The Terraform data source below automatically looks up
-# the latest AMI so that a simple "terraform apply" will just work without the user needing to manually build an AMI and
-# fill in the right value.
-#
-# !! WARNING !! These exmaple AMIs are meant only convenience when initially testing this repo. Do NOT use these example
-# AMIs in a production setting because it is important that you consciously think through the configuration you want
-# in your own production AMI.
-#
-# NOTE: This Terraform data source must return at least one AMI result or the entire template will fail. See
-# /_ci/publish-amis-in-new-account.md for more information.
-# ---------------------------------------------------------------------------------------------------------------------
-data "aws_ami" "nomad_consul" {
-  most_recent = true
-
-  # If we change the AWS Account in which test are run, update this value.
-  owners = ["562637147889"]
-
-  filter {
-    name   = "virtualization-type"
-    values = ["hvm"]
-  }
-
-  filter {
-    name   = "is-public"
-    values = ["true"]
-  }
-
-  filter {
-    name   = "name"
-    values = ["nomad-consul-ubuntu-*"]
-  }
-}
-
-# ---------------------------------------------------------------------------------------------------------------------
 # DEPLOY THE SERVER NODES
 # Note that we use the consul-cluster module to deploy both the Nomad and Consul nodes on the same servers
 # ---------------------------------------------------------------------------------------------------------------------
@@ -70,7 +34,7 @@ module "servers" {
   cluster_tag_key   = var.cluster_tag_key
   cluster_tag_value = var.cluster_tag_value
 
-  ami_id = var.ami_id == null ? data.aws_ami.nomad_consul.image_id : var.ami_id
+  ami_id = var.ami_id
   user_data = templatefile("${path.module}/examples/root-example/user-data-server.sh", {
     cluster_tag_key   = var.cluster_tag_key
     cluster_tag_value = var.cluster_tag_value
@@ -139,7 +103,7 @@ module "clients" {
   max_size         = var.num_clients
   desired_capacity = var.num_clients
 
-  ami_id = var.ami_id == null ? data.aws_ami.nomad_consul.image_id : var.ami_id
+  ami_id = var.ami_id
   user_data = templatefile("${path.module}/examples/root-example/user-data-client.sh", {
     cluster_tag_key   = var.cluster_tag_key
     cluster_tag_value = var.cluster_tag_value
