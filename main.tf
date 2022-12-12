@@ -70,8 +70,12 @@ module "servers" {
   cluster_tag_key   = var.cluster_tag_key
   cluster_tag_value = var.cluster_tag_value
 
-  ami_id    = var.ami_id == null ? data.aws_ami.nomad_consul.image_id : var.ami_id
-  user_data = data.template_file.user_data_server.rendered
+  ami_id = var.ami_id == null ? data.aws_ami.nomad_consul.image_id : var.ami_id
+  user_data = templatefile("${path.module}/examples/root-example/user-data-server.sh", {
+    cluster_tag_key   = var.cluster_tag_key
+    cluster_tag_value = var.cluster_tag_value
+    num_servers       = var.num_servers
+  })
 
   vpc_id     = data.aws_vpc.default.id
   subnet_ids = data.aws_subnet_ids.default.ids
@@ -112,21 +116,6 @@ module "nomad_security_group_rules" {
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
-# THE USER DATA SCRIPT THAT WILL RUN ON EACH SERVER NODE WHEN IT'S BOOTING
-# This script will configure and start Consul and Nomad
-# ---------------------------------------------------------------------------------------------------------------------
-
-data "template_file" "user_data_server" {
-  template = file("${path.module}/examples/root-example/user-data-server.sh")
-
-  vars = {
-    cluster_tag_key   = var.cluster_tag_key
-    cluster_tag_value = var.cluster_tag_value
-    num_servers       = var.num_servers
-  }
-}
-
-# ---------------------------------------------------------------------------------------------------------------------
 # DEPLOY THE CLIENT NODES
 # ---------------------------------------------------------------------------------------------------------------------
 
@@ -150,8 +139,11 @@ module "clients" {
   max_size         = var.num_clients
   desired_capacity = var.num_clients
 
-  ami_id    = var.ami_id == null ? data.aws_ami.nomad_consul.image_id : var.ami_id
-  user_data = data.template_file.user_data_client.rendered
+  ami_id = var.ami_id == null ? data.aws_ami.nomad_consul.image_id : var.ami_id
+  user_data = templatefile("${path.module}/examples/root-example/user-data-client.sh", {
+    cluster_tag_key   = var.cluster_tag_key
+    cluster_tag_value = var.cluster_tag_value
+  })
 
   vpc_id     = data.aws_vpc.default.id
   subnet_ids = data.aws_subnet_ids.default.ids
@@ -182,20 +174,6 @@ module "consul_iam_policies" {
   source = "github.com/hashicorp/terraform-aws-consul//modules/consul-iam-policies?ref=v0.8.0"
 
   iam_role_id = module.clients.iam_role_id
-}
-
-# ---------------------------------------------------------------------------------------------------------------------
-# THE USER DATA SCRIPT THAT WILL RUN ON EACH CLIENT NODE WHEN IT'S BOOTING
-# This script will configure and start Consul and Nomad
-# ---------------------------------------------------------------------------------------------------------------------
-
-data "template_file" "user_data_client" {
-  template = file("${path.module}/examples/root-example/user-data-client.sh")
-
-  vars = {
-    cluster_tag_key   = var.cluster_tag_key
-    cluster_tag_value = var.cluster_tag_value
-  }
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
