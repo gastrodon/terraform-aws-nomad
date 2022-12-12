@@ -125,7 +125,7 @@ resource "aws_launch_configuration" "launch_configuration" {
 resource "aws_security_group" "lc_security_group" {
   name_prefix = var.cluster_name
   description = "Security group for the ${var.cluster_name} launch configuration"
-  vpc_id      = var.vpc_id
+  vpc_id      = data.aws_vpc.default.id
 
   # aws_launch_configuration.launch_configuration in this module sets create_before_destroy to true, which means
   # everything it depends on, including this resource, must set it as well, or you'll get cyclic dependency errors
